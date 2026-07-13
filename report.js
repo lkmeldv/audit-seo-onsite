@@ -49,7 +49,8 @@ chrome.storage.local.get('auditReport', ({ auditReport: f }) => {
 
     <h2>Contexte technique</h2>
     <table><tbody>
-      <tr><td style="width:170px"><b>Type de site détecté</b></td><td>${esc(f.siteType)}</td></tr>
+      <tr><td style="width:170px"><b>Domain Rating (Ahrefs)</b></td><td>${f.dr == null ? 'n/c' : f.dr} / 100</td></tr>
+      <tr><td><b>Type de site détecté</b></td><td>${esc(f.siteType)}</td></tr>
       <tr><td><b>Technologie</b></td><td>${esc(f.tech.join(', ') || 'non identifiée')}${f.gen ? ' &middot; ' + esc(f.gen) : ''}</td></tr>
       <tr><td><b>Serveur</b></td><td>${esc(f.server || 'n/c')}</td></tr>
       <tr><td><b>Scripts tiers</b></td><td>${esc(f.scripts.join(', ') || 'aucun détecté')}</td></tr>
@@ -94,7 +95,7 @@ chrome.storage.local.get('auditReport', ({ auditReport: f }) => {
     ${f.schemaErr ? `<h2>Schema.org en erreur <span class="cnt">${f.schemaErr.length}</span></h2>` + tbl(f.schemaErr.map(x => `<tr><td class="u">${short(x.url)}</td><td><span class="tag a">${x.n} erreur(s)</span></td></tr>`), ['URL', 'Erreurs']) : ''}
 
     <a class="promo" href="https://www.linkuma.com" target="_blank" rel="noopener">Des pages sous-maillées ou à renforcer ? <b>Linkuma</b> - la plateforme de backlinks dès 5€ &middot; linkuma.com</a>
-    <div class="foot">${brand ? brand + ' &middot; ' : ''}Audit SEO on-site &middot; ${esc(f.origin)} &middot; ${esc(f.date)}</div>
+    <div class="foot">${brand ? brand + ' &middot; ' : ''}Audit SEO on-site &middot; ${esc(f.origin)} &middot; ${esc(f.date)} &middot; Domain Rating by Ahrefs</div>
   `;
   setTimeout(() => window.print(), 450);
 });

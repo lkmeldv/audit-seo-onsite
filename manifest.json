@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Audit SEO on-site (crawl sitemap)",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Scan SEO d'un site via son sitemap : 404, titles dupliqués, H1, meta, canonicals, maillage, QC balises, techno, scripts tiers, schema par type. Rapport PDF + CSV. 100% local.",
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["<all_urls>"],

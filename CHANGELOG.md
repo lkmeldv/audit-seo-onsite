@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables de l'extension sont consignées ici (une entrée à chaque changement). Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/), versions selon [SemVer](https://semver.org/lang/fr/).
 
+## [1.5.0] - 2026-07-13
+### ✨ Ajouté
+- 📈 **Domain Rating (Ahrefs)** affiché en évidence dès l'ouverture de l'extension (barre dédiée color-codée : rouge / orange / vert), via l'endpoint public gratuit d'Ahrefs (sans clé API)
+- 📈 DR repris dans le contexte technique, le rapport PDF et l'export CSV, avec l'attribution "Domain Rating by Ahrefs"
+
 ## [1.4.2] - 2026-07-13
 ### 🐛 Corrigé
 - 🗺️ Détection du sitemap bien plus robuste : lecture des directives `Sitemap:` du `robots.txt` et test de chemins non standards (`sitemap-index.xml`, `wp-sitemap.xml`, `sitemap/sitemap.xml`...)

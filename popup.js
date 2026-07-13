@@ -4,13 +4,32 @@ const esc = s => { const d = document.createElement('div'); d.textContent = s ==
 const badgeTxt = s => s === 'g' ? 'OK' : s === 'a' ? '~' : '!';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const prog = t => { $('prog').textContent = t; };
-let lastData = null, lastReport = '', lastCsv = '';
+let lastData = null, lastReport = '', lastCsv = '', drValue = null;
 
 chrome.tabs.query({ active: true, currentWindow: true }, t => {
   let origin = ''; try { origin = new URL(t[0].url).origin; } catch (e) {}
   $('domain').value = origin;
-  if (origin) showSitemapCount(origin);
+  if (origin) { showSitemapCount(origin); showDR(origin); }
 });
+
+// Domain Rating Ahrefs (endpoint public gratuit, sans clé API)
+async function fetchDR(origin) {
+  try {
+    const host = new URL(origin).host;
+    const r = await fetch('https://api.ahrefs.com/v3/public/domain-rating-free?target=' + encodeURIComponent(host), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const dr = j && j.domain_rating && j.domain_rating.domain_rating;
+    return typeof dr === 'number' ? dr : null;
+  } catch (e) { return null; }
+}
+async function showDR(origin) {
+  const el = $('drVal'); el.textContent = '...';
+  drValue = await fetchDR(origin);
+  if (drValue == null) { el.textContent = 'n/a'; el.className = 'drn'; return; }
+  el.textContent = drValue;
+  el.className = 'drn ' + (drValue >= 60 ? 'g' : drValue >= 30 ? 'a' : 'r');
+}
 
 $('scanBtn').addEventListener('click', runScan);
 $('domain').addEventListener('keydown', e => { if (e.key === 'Enter') runScan(); });
@@ -219,7 +238,8 @@ function buildFindings(origin, mode, scanned, broken, h1bad, dup, mdMiss, weak, 
   const f = { origin, mode, scanned, date: new Date().toLocaleString('fr-FR'), broken, h1bad, dup, mdMiss, weak, weakLabel, qc, cwv, schemaErr };
   return f;
 }
-function finalize(f, home) {
+async function finalize(f, home) {
+  f.dr = drValue != null ? drValue : await fetchDR(f.origin);
   f.tech = home.tech; f.gen = home.gen; f.server = home.server; f.scripts = home.scripts;
   f.schemaPresent = [...new Set([...(f._schema || []), ...home.schemaHome])].filter(x => x !== '@context').sort();
   f.siteType = inferType(f._urls || [], f.tech, f.schemaPresent);
@@ -248,7 +268,7 @@ async function runScan() {
     prog('Analyse de la page d\'accueil (techno, scripts)...');
     const home = await analyzeHomepage(origin);
     f = await scanLite(origin, max);
-    if (f) finalize(f, home);
+    if (f) await finalize(f, home);
   } catch (e) { prog('Erreur : ' + e.message); btn.disabled = false; return; }
   if (!f) { prog('Impossible de récupérer des pages (ni sitemap, ni liens accessibles). Le site bloque peut-être les requêtes.'); btn.disabled = false; return; }
   render(f, noteExtra);
@@ -274,6 +294,7 @@ function render(f, noteExtra) {
   const A = p => `<a href="${esc(f.origin + p)}" target="_blank" rel="noopener" class="lnk">${esc(p)}</a>`;
 
   let html = `<div class="sec">Contexte technique</div>
+    <div class="row"><div class="mini" style="color:#1f2733"><b>Domain Rating (Ahrefs) :</b> ${f.dr == null ? 'n/a' : f.dr} / 100</div></div>
     <div class="row"><div class="mini" style="color:#1f2733"><b>Type détecté :</b> ${esc(f.siteType)}</div></div>
     <div class="row"><div class="mini" style="color:#1f2733"><b>Techno :</b> ${esc(f.tech.join(', ') || 'non identifiée')}${f.gen ? ' &middot; ' + esc(f.gen) : ''}${f.server ? ' &middot; ' + esc(f.server) : ''}</div></div>
     <div class="row"><div class="mini" style="color:#1f2733"><b>Scripts tiers :</b> ${esc(f.scripts.join(', ') || 'aucun détecté')}</div></div>
@@ -293,14 +314,14 @@ function render(f, noteExtra) {
 
   lastData = f; lastReport = buildText(f); lastCsv = buildCsv(f);
   ['pdfBtn', 'csvBtn', 'copyBtn'].forEach(b => $(b).style.display = 'block');
-  $('note').textContent = 'Scan basé sur le HTML serveur. Techno et scripts tiers détectés sur la page d\'accueil. Clique une URL pour l\'ouvrir.';
+  $('note').textContent = 'Scan basé sur le HTML serveur. Clique une URL pour l\'ouvrir. Domain Rating by Ahrefs.';
 }
 
 // ================= Export =================
 function buildText(f) {
   const L = (t, items) => `\n== ${t} (${items.length}) ==\n` + (items.length ? items.map(x => '- ' + x).join('\n') : 'Rien à signaler');
   return `Audit SEO ${f.origin} [${f.mode}] - score ${f.score}/100\n${f.scanned} pages analysées${f.sitemapCount ? ' / ' + f.sitemapCount + ' au sitemap' : ''} - ${f.date}\n` +
-    `Type: ${f.siteType} | Techno: ${f.tech.join(', ') || '?'}${f.gen ? ' (' + f.gen + ')' : ''} | Serveur: ${f.server || '?'}\n` +
+    `DR Ahrefs: ${f.dr == null ? 'n/c' : f.dr}/100 | Type: ${f.siteType} | Techno: ${f.tech.join(', ') || '?'}${f.gen ? ' (' + f.gen + ')' : ''} | Serveur: ${f.server || '?'}\n` +
     `Scripts tiers: ${f.scripts.join(', ') || 'aucun'}\nSchema presents: ${f.schemaPresent.join(', ') || 'aucun'}` +
     L('Schema recommandes manquants', f.schemaMissing) +
     L('404', f.broken.map(x => `${x.url} -> ${x.status}`)) +
@@ -317,6 +338,7 @@ function buildText(f) {
 function csvRow(a) { return a.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',') + '\n'; }
 function buildCsv(f) {
   let c = csvRow(['Catégorie', 'URL / Élément', 'Détail']);
+  c += csvRow(['Contexte', 'Domain Rating (Ahrefs)', f.dr == null ? 'n/c' : f.dr]);
   c += csvRow(['Contexte', 'Type', f.siteType]);
   c += csvRow(['Contexte', 'Techno', f.tech.join(' | ') + (f.gen ? ' (' + f.gen + ')' : '')]);
   c += csvRow(['Contexte', 'Serveur', f.server]);

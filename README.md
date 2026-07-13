@@ -52,6 +52,7 @@ L'extension **ne collecte, ne stocke et n'envoie aucune donnée** vers un serveu
 
 Historique complet dans [CHANGELOG.md](CHANGELOG.md). Dernières versions :
 
+- **1.5.0** - 📈 Domain Rating (Ahrefs) affiché dès l'ouverture (barre dédiée) + repris dans PDF/CSV
 - **1.4.2** - 🗺️ Détection sitemap robuste (robots.txt, `<loc>` multi-ligne, CDATA, chemins non standards) + 🕸️ fallback crawl des liens si aucun sitemap
 - **1.4.1** - 🧹 Retrait de la bannière promo du popup
 - **1.4.0** - 🎉 Première version publique (checks on-site complets, techno, scripts, schema par type, PDF/CSV, "Tout le site")
