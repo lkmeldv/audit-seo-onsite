@@ -48,6 +48,14 @@ L'extension **ne collecte, ne stocke et n'envoie aucune donnée** vers un serveu
 - Les détections techno / scripts se font sur la **page d'accueil** (signaux site-wide).
 - Requêtes par lots pour rester poli avec le serveur ; un très gros site (plusieurs milliers de pages) prend quelques minutes.
 
+## 📋 Changelog
+
+Historique complet dans [CHANGELOG.md](CHANGELOG.md). Dernières versions :
+
+- **1.4.2** - 🗺️ Détection sitemap robuste (robots.txt, `<loc>` multi-ligne, CDATA, chemins non standards) + 🕸️ fallback crawl des liens si aucun sitemap
+- **1.4.1** - 🧹 Retrait de la bannière promo du popup
+- **1.4.0** - 🎉 Première version publique (checks on-site complets, techno, scripts, schema par type, PDF/CSV, "Tout le site")
+
 ## Auteur
 
 **EL GNANI Mohamed** - CEO [Linkuma](https://www.linkuma.com), la plateforme de backlinks low cost (netlinking à partir de 5€, sans engagement).
