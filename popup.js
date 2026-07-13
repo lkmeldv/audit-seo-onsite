@@ -97,21 +97,59 @@ function inferType(urls, tech, schema) {
 
 // ================= Sitemap =================
 async function fetchText(u) { const r = await fetch(u, { credentials: 'omit' }); return { ok: r.ok, status: r.status, text: r.ok ? await r.text() : '' }; }
-const parseLocs = xml => (xml.match(/<loc>(.*?)<\/loc>/g) || []).map(l => l.replace(/<\/?loc>/g, '').trim());
+const parseLocs = xml => (xml.match(/<loc>([\s\S]*?)<\/loc>/gi) || []).map(l => l.replace(/<\/?loc>/gi, '').replace(/<!\[CDATA\[|\]\]>/g, '').trim());
+function sameHost(u, origin) { try { return new URL(u).host === new URL(origin).host; } catch (e) { return false; } }
+const isMedia = u => /\.(jpg|jpeg|png|webp|gif|svg|css|js|pdf|zip|mp4|webmanifest)$/i.test(u);
+async function sitemapCandidates(origin) {
+  const c = [];
+  try { const rob = await fetchText(origin + '/robots.txt'); if (rob.ok) (rob.text.match(/sitemap:\s*\S+/ig) || []).forEach(l => c.push(l.replace(/sitemap:\s*/i, '').trim())); } catch (e) {}
+  ['/sitemap.xml', '/sitemap-index.xml', '/sitemap_index.xml', '/sitemapindex.xml', '/wp-sitemap.xml', '/sitemap/sitemap.xml', '/sitemap1.xml', '/sitemap/index.xml', '/sitemaps.xml'].forEach(p => c.push(origin + p));
+  return [...new Set(c)];
+}
 async function collectSitemap(origin) {
-  let urls = [];
-  let sm = await fetchText(origin + '/sitemap.xml');
-  if (!sm.ok) sm = await fetchText(origin + '/sitemap_index.xml');
-  if (!sm.ok) return urls;
-  if (/<sitemap>/.test(sm.text)) {
-    for (const s of parseLocs(sm.text).filter(u => /\.xml/i.test(u)).slice(0, 20)) { try { urls.push(...parseLocs((await fetchText(s)).text)); } catch (e) {} }
-  } else urls = parseLocs(sm.text);
-  return urls.filter(u => u.startsWith(origin) && !/\.(jpg|jpeg|png|webp|gif|svg|css|js|pdf|xml)$/i.test(u));
+  let urls = []; const seen = new Set();
+  for (const cand of await sitemapCandidates(origin)) {
+    if (/\.gz$/i.test(cand)) continue;
+    let sm; try { sm = await fetchText(cand); } catch (e) { continue; }
+    if (!sm.ok || !/<(urlset|sitemapindex|loc)\b/i.test(sm.text)) continue;
+    if (/<sitemapindex|<sitemap>/i.test(sm.text)) {
+      for (const s of parseLocs(sm.text).filter(u => /\.xml/i.test(u)).slice(0, 60)) {
+        if (seen.has(s)) continue; seen.add(s);
+        try { urls.push(...parseLocs((await fetchText(s)).text)); } catch (e) {}
+        if (urls.length > 20000) break;
+      }
+    } else urls.push(...parseLocs(sm.text));
+    if (urls.length) break;
+  }
+  return [...new Set(urls)].filter(u => sameHost(u, origin) && !isMedia(u) && !/\.xml$/i.test(u));
+}
+// Fallback : découverte par exploration des liens depuis la page d'accueil
+async function discoverByCrawl(origin, max) {
+  const cap = Math.min(max, 400), visited = new Set(), queue = [origin + '/'], found = [], parser = new DOMParser();
+  while (queue.length && found.length < cap) {
+    const batch = queue.splice(0, 6).filter(u => !visited.has(u));
+    if (!batch.length) continue;
+    batch.forEach(u => visited.add(u));
+    await Promise.all(batch.map(async u => {
+      try {
+        const r = await fetch(u, { credentials: 'omit', redirect: 'follow' });
+        if (!r.ok || !/text\/html/i.test(r.headers.get('content-type') || '')) return;
+        found.push(u);
+        const doc = parser.parseFromString(await r.text(), 'text/html');
+        doc.querySelectorAll('a[href]').forEach(a => {
+          const h = a.getAttribute('href') || ''; if (h.startsWith('#') || h.startsWith('mailto:') || h.startsWith('tel:')) return;
+          try { const abs = norm(new URL(h, u).href); if (sameHost(abs, origin) && !isMedia(abs) && !visited.has(abs) && !queue.includes(abs)) queue.push(abs); } catch (e) {}
+        });
+      } catch (e) {}
+      prog('Exploration des liens : ' + found.length + ' pages trouvées...');
+    }));
+  }
+  return [...new Set(found.map(norm))];
 }
 let sitemapTotal = null;
 async function showSitemapCount(origin) {
   prog('Lecture du sitemap...');
-  try { const u = await collectSitemap(origin); sitemapTotal = u.length; prog(u.length ? `Sitemap : ${u.length} pages détectées. Prêt à scanner.` : 'Aucun sitemap trouvé (' + origin + '/sitemap.xml).'); }
+  try { const u = await collectSitemap(origin); sitemapTotal = u.length; prog(u.length ? `Sitemap : ${u.length} pages détectées. Prêt à scanner.` : 'Aucun sitemap détecté. Le scan explorera les liens depuis la page d\'accueil.'); }
   catch (e) { prog('Sitemap illisible.'); }
 }
 const norm = u => (u.split('#')[0].split('?')[0].replace(/\/$/, '')) || u;
@@ -134,6 +172,8 @@ async function analyzeHomepage(origin) {
 // ================= Scan LITE =================
 async function scanLite(origin, max) {
   let urls = [...new Set((await collectSitemap(origin)).map(norm))].slice(0, max);
+  let modeLabel = 'Lite (sitemap)';
+  if (!urls.length) { prog('Aucun sitemap : exploration des liens...'); urls = (await discoverByCrawl(origin, max)).slice(0, max); modeLabel = 'Lite (crawl liens)'; }
   if (!urls.length) return null;
   const pages = {}, inCount = {}, schemaSeen = new Set(); const parser = new DOMParser(); let done = 0;
   for (let i = 0; i < urls.length; i += 6) {
@@ -156,7 +196,7 @@ async function scanLite(origin, max) {
     }));
   }
   const arr = Object.entries(pages), short = u => u.replace(origin, '') || '/';
-  const f = buildFindings(origin, 'Lite (sitemap)', urls.length,
+  const f = buildFindings(origin, modeLabel, urls.length,
     arr.filter(([, p]) => p.status !== 200).map(([u, p]) => ({ url: short(u), status: p.status })),
     arr.filter(([, p]) => p.status === 200 && p.h1n !== 1).map(([u, p]) => ({ url: short(u), h1n: p.h1n })),
     dupTitles(arr, short),
@@ -210,7 +250,7 @@ async function runScan() {
     f = await scanLite(origin, max);
     if (f) finalize(f, home);
   } catch (e) { prog('Erreur : ' + e.message); btn.disabled = false; return; }
-  if (!f) { prog('Aucun sitemap exploitable sur ' + origin + '/sitemap.xml'); btn.disabled = false; return; }
+  if (!f) { prog('Impossible de récupérer des pages (ni sitemap, ni liens accessibles). Le site bloque peut-être les requêtes.'); btn.disabled = false; return; }
   render(f, noteExtra);
   btn.disabled = false; btn.textContent = 'Relancer';
 }
