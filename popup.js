@@ -9,8 +9,30 @@ let lastData = null, lastReport = '', lastCsv = '', drValue = null;
 chrome.tabs.query({ active: true, currentWindow: true }, t => {
   let origin = ''; try { origin = new URL(t[0].url).origin; } catch (e) {}
   $('domain').value = origin;
-  if (origin) { showSitemapCount(origin); showDR(origin); }
+  if (origin) { loadCache(origin); showSitemapCount(origin); showDR(origin); }
 });
+
+// ---- Cache par domaine (chrome.storage.local, LRU 12 domaines) ----
+const humanAge = ms => { const m = Math.round(ms / 60000); if (m < 1) return "moins d'1 min"; if (m < 60) return m + ' min'; const h = Math.round(m / 60); return h < 24 ? h + ' h' : Math.round(h / 24) + ' j'; };
+function saveCache(f) {
+  if (!f || f.scanned > 1500) return;
+  chrome.storage.local.get('cidx', ({ cidx }) => {
+    let idx = Array.isArray(cidx) ? cidx.filter(o => o !== f.origin) : [];
+    idx.push(f.origin); const evict = [];
+    while (idx.length > 12) evict.push('c:' + idx.shift());
+    try { chrome.storage.local.set({ ['c:' + f.origin]: { data: f, ts: Date.now() }, cidx: idx }, () => chrome.runtime.lastError); } catch (e) {}
+    if (evict.length) chrome.storage.local.remove(evict);
+  });
+}
+function loadCache(origin) {
+  chrome.storage.local.get('c:' + origin, o => {
+    const rec = o['c:' + origin];
+    if (!rec || !rec.data) return;
+    render(rec.data, '');
+    $('note').textContent = '📦 Dernier scan il y a ' + humanAge(Date.now() - rec.ts) + ' (en cache). Clique "Relancer" pour actualiser. ' + $('note').textContent;
+    $('scanBtn').textContent = 'Relancer';
+  });
+}
 
 // Domain Rating Ahrefs (endpoint public gratuit, sans clé API)
 async function fetchDR(origin) {
@@ -106,10 +128,13 @@ function schemaOfDoc(doc) { const a = []; doc.querySelectorAll('script[type="app
 
 function inferType(urls, tech, schema) {
   const j = urls.join(' ').toLowerCase(), t = tech.join(' ').toLowerCase(), s = schema.map(x => x.toLowerCase());
-  if (/shopify|woocommerce|prestashop/.test(t) || s.includes('product') || /\/(produit|product|panier|cart|boutique|shop|collections)\b/.test(j)) return 'ecommerce';
-  if (s.includes('softwareapplication') || /\/(tarifs|pricing|features|fonctionnalites)\b/.test(j)) return 'saas';
-  const blog = (j.match(/\/blog\//g) || []).length + (j.match(/\/article/g) || []).length;
-  if (blog >= 5 || s.includes('article') || s.includes('blogposting')) return 'blog / média';
+  // ecommerce = vraies preuves de boutique (pas juste le plugin WooCommerce ni la page /panier auto-générée)
+  const ecomUrls = (j.match(/\/(produit|produits|product|products|boutique|shop|collections|store)\b/g) || []).length;
+  const hasProductSchema = s.includes('product') || (s.includes('offer') && s.includes('aggregaterating'));
+  if (hasProductSchema || /prestashop|shopify/.test(t) || ecomUrls >= 3 || (t.includes('woocommerce') && ecomUrls >= 2)) return 'ecommerce';
+  if (s.includes('softwareapplication') || /\/(tarifs|pricing|fonctionnalites)\b/.test(j)) return 'saas';
+  const content = (j.match(/\/(blog|article|articles|actualite|actualites|news|post|posts|tips|guide|guides|ressources)\b/g) || []).length + ((s.includes('article') || s.includes('blogposting')) ? 5 : 0);
+  if (content >= 5) return 'blog / média';
   if (s.includes('localbusiness') || /\/(contact|horaires|rendez-vous|devis)\b/.test(j)) return 'local / vitrine';
   return 'vitrine / autre';
 }
@@ -272,6 +297,7 @@ async function runScan() {
   } catch (e) { prog('Erreur : ' + e.message); btn.disabled = false; return; }
   if (!f) { prog('Impossible de récupérer des pages (ni sitemap, ni liens accessibles). Le site bloque peut-être les requêtes.'); btn.disabled = false; return; }
   render(f, noteExtra);
+  saveCache(f);
   btn.disabled = false; btn.textContent = 'Relancer';
 }
 

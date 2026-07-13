@@ -2,6 +2,12 @@
 
 Toutes les évolutions notables de l'extension sont consignées ici (une entrée à chaque changement). Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/), versions selon [SemVer](https://semver.org/lang/fr/).
 
+## [1.6.0] - 2026-07-13
+### ✨ Ajouté
+- 💾 **Cache par domaine** : le dernier scan d'un site s'affiche instantanément à l'ouverture ("📦 dernier scan il y a X"), plus besoin de recrawler à chaque fois. Le bouton "Relancer" refait un scan frais. DR et compteur sitemap toujours rafraîchis en direct. (LRU 12 domaines, pas de cache au-delà de 1500 pages)
+### 🐛 Corrigé
+- 🏷️ Type de site : ne classe plus en "ecommerce" les sites qui ont juste le plugin WooCommerce (ou la page /panier auto-générée). L'ecommerce exige désormais de vraies preuves (schema Product, plusieurs URLs produit/boutique, ou plateforme dédiée Shopify/PrestaShop). Les sites de contenu (blog, /tips, guides) sont correctement classés "blog / média".
+
 ## [1.5.0] - 2026-07-13
 ### ✨ Ajouté
 - 📈 **Domain Rating (Ahrefs)** affiché en évidence dès l'ouverture de l'extension (barre dédiée color-codée : rouge / orange / vert), via l'endpoint public gratuit d'Ahrefs (sans clé API)
