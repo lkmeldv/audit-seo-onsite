@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Rapport d'audit SEO</title>
+<style>
+  @page { size:A4; margin:14mm 12mm; }
+  :root{--indigo:#4f46e5;--ink:#1f2733;--line:#e5e9f2;--green:#16a34a;--amber:#d97706;--red:#dc2626;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);font-size:12.5px;line-height:1.5;background:#fff;max-width:1000px;margin:0 auto;padding:24px}
+  .head{background:linear-gradient(135deg,#312e81,#4f46e5);color:#fff;padding:22px 26px;border-radius:12px;margin-bottom:18px}
+  .head .brand{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c7d2fe;margin-bottom:6px}
+  .head h1{font-size:22px;margin-bottom:4px}.head .u{font-size:13px;opacity:.9;word-break:break-all}.head .d{font-size:11px;opacity:.75;margin-top:6px}
+  .scorewrap{display:flex;align-items:center;gap:22px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 22px;margin-bottom:16px}
+  .scorebig{font-size:44px;font-weight:800;line-height:1}.scorebig span{font-size:16px;color:#8890a3;font-weight:600}
+  .scorebig.g{color:var(--green)}.scorebig.a{color:var(--amber)}.scorebig.r{color:var(--red)}
+  .prio div{font-size:12.5px;margin:3px 0}
+  .rtxt{font-size:11.5px;color:#5a6478;margin-top:3px}
+  .tag.i{background:#eef1f7;color:#4f46e5}
+  .toolbar{display:flex;gap:10px;margin-bottom:16px}
+  .toolbar button{background:var(--indigo);color:#fff;border:0;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .card .n{font-size:20px;font-weight:800}.card.r .n{color:var(--red)}.card.a .n{color:var(--amber)}.card.g .n{color:var(--green)}
+  .card .l{font-size:9px;text-transform:uppercase;color:#8890a3;letter-spacing:.3px;margin-top:2px}
+  h2{font-size:15px;color:#312e81;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #eef1f7}
+  h2 .cnt{font-size:12px;color:#8890a3;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:6px}
+  th{background:#f3f4fb;text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#5a6478;border-bottom:1px solid var(--line)}
+  td{padding:6px 8px;border-bottom:1px solid #f0f2f8;vertical-align:top;word-break:break-word}
+  td.u{font-family:'SF Mono',Monaco,monospace;color:var(--indigo)}
+  .lnk{color:var(--indigo);text-decoration:none;border-bottom:1px dotted #b6bce8}
+  .lnk:hover{border-bottom-style:solid}
+  @media print{.lnk{border-bottom:none;color:var(--indigo)}}
+  .tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px}
+  .tag.r{background:#fdeaea;color:var(--red)}.tag.a{background:#fdf3e6;color:var(--amber)}
+  .ok{color:var(--green);font-weight:600;font-size:12px;padding:4px 0}
+  .promo{display:block;text-decoration:none;margin:22px 0 0;padding:14px 18px;border-radius:10px;background:linear-gradient(135deg,#1e3a8a,#4f46e5);color:#fff;font-size:13px;text-align:center}
+  .promo b{font-weight:800}
+  .foot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:10.5px;color:#9aa3b5;text-align:center}
+  @media print{.promo{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  @media print{ .toolbar{display:none} body{padding:0} .head,th,.card{-webkit-print-color-adjust:exact;print-color-adjust:exact} h2,table{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div id="app">Chargement du rapport...</div>
+<script src="report.js"></script>
+</body>
+</html>
